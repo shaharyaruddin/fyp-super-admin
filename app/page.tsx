@@ -29,11 +29,26 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  const toggleStatus = (id: string) => {
-    // Optimistic UI update - TODO: Integrate with backend API later
-    setCompanies(prev => prev.map(c =>
-      c._id === id ? { ...c, isActive: !c.isActive } : c
-    ));
+  const [rechargingId, setRechargingId] = useState<string | null>(null);
+
+  const handleRecharge = async (id: string) => {
+    try {
+      setRechargingId(id);
+      // Default amount is 50, which adds 1000 tokens (50 * 20)
+      const amount = 50;
+      await apiService.rechargeTokens(id, amount);
+
+      alert("Company recharged successfully!");
+
+      // Update local state to reflect 'Active' status (mocked check)
+      setCompanies(prev => prev.map(c =>
+        c._id === id ? { ...c, isActive: true } : c
+      ));
+    } catch (err: any) {
+      alert(err.message || "Recharge failed");
+    } finally {
+      setRechargingId(null);
+    }
   };
 
   return (
@@ -99,8 +114,8 @@ export default function SuperAdminDashboard() {
                       <td className="px-6 py-4 text-center">
                         <span
                           className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${company.isActive
-                              ? "bg-green-100 text-green-700"
-                              : "bg-red-100 text-red-700"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
                             }`}
                         >
                           {company.isActive ? "Active" : "Inactive"}
@@ -108,13 +123,14 @@ export default function SuperAdminDashboard() {
                       </td>
                       <td className="px-6 py-4 text-center">
                         <button
-                          onClick={() => toggleStatus(company._id)}
-                          className={`px-3 py-1.5 rounded-md text-xs font-medium border transition ${company.isActive
-                              ? "border-red-200 text-red-600 hover:bg-red-50"
-                              : "border-green-200 text-green-600 hover:bg-green-50"
+                          onClick={() => handleRecharge(company._id)}
+                          disabled={rechargingId === company._id}
+                          className={`px-3 py-1.5 rounded-md text-xs font-medium border transition ${rechargingId === company._id
+                            ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                            : "border-green-200 text-green-600 hover:bg-green-50"
                             }`}
                         >
-                          {company.isActive ? "Deactivate" : "Activate"}
+                          {rechargingId === company._id ? "Recharging..." : "Recharge / Activate"}
                         </button>
                       </td>
                     </tr>
