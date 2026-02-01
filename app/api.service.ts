@@ -8,7 +8,8 @@ export interface Company {
     _id: string;
     name: string;
     email: string;
-    isActive?: boolean; // Mocked property until backend implements it
+    subscription: string; // "active" | "inactive"
+    plan: string;
     createdAt: string;
 }
 
