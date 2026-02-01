@@ -173,7 +173,9 @@
     }
 
     sendBtn.onclick = sendMessage;
-    inputEl.onkeypress = e => e.key === "Enter" && sendMessage();
+    inputEl.onkeypress = e => {
+      if (e.key === "Enter") sendMessage();
+    };
 
     addMessage("👋 Hello! How can I help you today?");
     console.log("[Chatbot] Ready");
