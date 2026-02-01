@@ -1,4 +1,4 @@
-// app/api.service.ts
+// app/super-admin/api.service.ts
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -33,6 +33,7 @@ export const apiService = {
 
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || "Failed to fetch companies");
+
     return data;
   },
 
@@ -45,6 +46,7 @@ export const apiService = {
 
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Recharge failed");
+
     return data;
   },
 };
