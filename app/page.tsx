@@ -7,6 +7,7 @@ export default function SuperAdminDashboard() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [rechargingId, setRechargingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCompanies();
@@ -15,13 +16,9 @@ export default function SuperAdminDashboard() {
   const fetchCompanies = async () => {
     try {
       setLoading(true);
+      setError("");
       const response = await apiService.getAllCompanies();
-      // Inject mock 'isActive' status if missing
-      const companiesWithStatus = response.data.map(c => ({
-        ...c,
-        isActive: c.isActive !== undefined ? c.isActive : true
-      }));
-      setCompanies(companiesWithStatus);
+      setCompanies(response.data);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -29,21 +26,19 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  const [rechargingId, setRechargingId] = useState<string | null>(null);
+  // 🧠 Smart active logic
+  const isCompanyActive = (company: Company) =>
+    company.subscription === "ACTIVE" && company.tokens > 0;
 
-  const handleRecharge = async (id: string) => {
+  const handleRecharge = async (companyId: string) => {
     try {
-      setRechargingId(id);
-      // Default amount is 50, which adds 1000 tokens (50 * 20)
-      const amount = 50;
-      await apiService.rechargeTokens(id, amount);
+      setRechargingId(companyId);
 
-      alert("Company recharged successfully!");
+      // Add 50 tokens
+      await apiService.rechargeTokens(companyId, 50);
 
-      // Update local state to reflect 'Active' status (mocked check)
-      setCompanies(prev => prev.map(c =>
-        c._id === id ? { ...c, isActive: true } : c
-      ));
+      alert("Tokens added & company activated!");
+      await fetchCompanies();
     } catch (err: any) {
       alert(err.message || "Recharge failed");
     } finally {
@@ -55,89 +50,108 @@ export default function SuperAdminDashboard() {
     <div className="min-h-screen bg-gray-50">
       {/* Navbar */}
       <nav className="bg-white border-b border-gray-200 px-8 py-4">
-        <h1 className="text-xl font-bold text-gray-900">Super Admin Dashboard</h1>
+        <h1 className="text-xl font-bold text-gray-900">
+          Super Admin Dashboard
+        </h1>
       </nav>
 
-      {/* Main Content */}
-      <main className="max-w-6xl mx-auto p-8">
+      {/* Content */}
+      <main className="max-w-7xl mx-auto p-8">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold text-gray-900">Registered Companies</h2>
+          <h2 className="text-2xl font-bold text-gray-900">
+            Registered Companies
+          </h2>
+
           <button
             onClick={fetchCompanies}
             className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-sm font-medium transition"
           >
-            Refresh List
+            Refresh
           </button>
         </div>
 
         {error && (
           <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6">
-            Error: {error}
+            {error}
           </div>
         )}
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-gray-600">
-              <thead className="bg-gray-50 text-gray-900 uppercase font-semibold">
-                <tr>
-                  <th className="px-6 py-4">Company Name</th>
-                  <th className="px-6 py-4">Email Address</th>
-                  <th className="px-6 py-4">Joined Date</th>
-                  <th className="px-6 py-4 text-center">Status</th>
-                  <th className="px-6 py-4 text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {loading ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
-                      Loading companies...
-                    </td>
-                  </tr>
-                ) : companies.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
-                      No companies found.
-                    </td>
-                  </tr>
-                ) : (
-                  companies.map((company) => (
-                    <tr key={company._id} className="hover:bg-gray-50 transition">
-                      <td className="px-6 py-4 font-medium text-gray-900">
-                        {company.name}
-                      </td>
-                      <td className="px-6 py-4">{company.email}</td>
-                      <td className="px-6 py-4">
-                        {new Date(company.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span
-                          className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${company.isActive
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
-                            }`}
-                        >
-                          {company.isActive ? "Active" : "Inactive"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <button
-                          onClick={() => handleRecharge(company._id)}
-                          disabled={rechargingId === company._id}
-                          className={`px-3 py-1.5 rounded-md text-xs font-medium border transition ${rechargingId === company._id
-                            ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                            : "border-green-200 text-green-600 hover:bg-green-50"
-                            }`}
-                        >
-                          {rechargingId === company._id ? "Recharging..." : "Recharge / Activate"}
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+        <table className="w-full text-left text-sm text-gray-600">
+  <thead className="bg-gray-50 text-gray-900 uppercase font-semibold">
+    <tr>
+      <th className="px-6 py-4">ID</th> {/* New column */}
+      <th className="px-6 py-4">Company</th>
+      <th className="px-6 py-4">Email</th>
+      <th className="px-6 py-4">Plan</th>
+      <th className="px-6 py-4 text-center">Tokens</th>
+      <th className="px-6 py-4 text-center">Status</th>
+      <th className="px-6 py-4 text-center">Action</th>
+    </tr>
+  </thead>
+
+  <tbody className="divide-y divide-gray-100">
+    {loading ? (
+      <tr>
+        <td colSpan={7} className="px-6 py-8 text-center">
+          Loading companies...
+        </td>
+      </tr>
+    ) : companies.length === 0 ? (
+      <tr>
+        <td colSpan={7} className="px-6 py-8 text-center">
+          No companies found
+        </td>
+      </tr>
+    ) : (
+      companies.map((company) => (
+        <tr key={company._id} className="hover:bg-gray-50">
+          <td className="px-6 py-4 font-mono text-gray-700 text-xs">
+            {company._id} {/* Showing _id */}
+          </td>
+          <td className="px-6 py-4 font-medium text-gray-900">
+            {company.name}
+          </td>
+          <td className="px-6 py-4">{company.email}</td>
+          <td className="px-6 py-4">
+            <span className="px-2 py-1 rounded bg-blue-100 text-blue-700 text-xs font-semibold">
+              {company.plan}
+            </span>
+          </td>
+          <td className="px-6 py-4 text-center font-medium">
+            {company.tokens} / {company.maxTokens}
+          </td>
+          <td className="px-6 py-4 text-center">
+            <span
+              className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${
+                isCompanyActive(company)
+                  ? "bg-green-100 text-green-700"
+                  : "bg-red-100 text-red-700"
+              }`}
+            >
+              {isCompanyActive(company) ? "Active" : "Inactive"}
+            </span>
+          </td>
+          <td className="px-6 py-4 text-center">
+            <button
+              onClick={() => handleRecharge(company._id)}
+              disabled={rechargingId === company._id}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium border transition ${
+                rechargingId === company._id
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "border-green-300 text-green-700 hover:bg-green-50"
+              }`}
+            >
+              {rechargingId === company._id ? "Recharging..." : "Recharge Tokens"}
+            </button>
+          </td>
+        </tr>
+      ))
+    )}
+  </tbody>
+</table>
+
           </div>
         </div>
       </main>
